@@ -9,6 +9,33 @@
             return;
         }
 
+        // Función para verificar y actualizar el estado del checkbox
+        function actualizarEstadoCheckbox() {
+            var $checkbox = $('#wp-link-nofollow');
+            if ($checkbox.length === 0) {
+                return;
+            }
+
+            var attrs = {};
+            if (typeof wpLink !== 'undefined' && typeof wpLink.getAttrs === 'function') {
+                attrs = wpLink.getAttrs() || {};
+            }
+
+            var currentRel = attrs.rel || '';
+
+            // Si wpLink.getAttrs no trae el rel aún, lo leemos directamente del elemento seleccionado en TinyMCE / Editor
+            if (!currentRel && typeof tinymce !== 'undefined' && tinymce.activeEditor) {
+                var selectedNode = tinymce.activeEditor.selection.getNode();
+                if (selectedNode && selectedNode.nodeName === 'A') {
+                    currentRel = $(selectedNode).attr('rel') || '';
+                }
+            }
+
+            // Marcar o desmarcar el checkbox según corresponda
+            var tieneNofollow = currentRel.split(' ').indexOf('nofollow') !== -1;
+            $checkbox.prop('checked', tieneNofollow);
+        }
+
         // Modificar la estructura de wplink al abrirse el modal
         $(document).on('wplink-open', function() {
             if ($('#wp-link-nofollow').length === 0) {
@@ -19,17 +46,12 @@
                     '</label>' +
                     '</div>';
                 
-                // Insertarlo dentro del contenedor de opciones del enlace
                 $('#link-options').append(nofollowCheckbox);
             }
 
-            // Sincronizar el estado del checkbox si el enlace ya tiene rel="nofollow"
-            var currentRel = wpLink.getAttrs().rel || '';
-            if (currentRel.indexOf('nofollow') !== -1) {
-                $('#wp-link-nofollow').prop('checked', true);
-            } else {
-                $('#wp-link-nofollow').prop('checked', false);
-            }
+            // Sincronizar inmediatamente y tras un pequeño delay para asegurar la lectura del nodo
+            actualizarEstadoCheckbox();
+            setTimeout(actualizarEstadoCheckbox, 50);
         });
 
         // Interceptar la obtención de atributos al insertar/actualizar el enlace
